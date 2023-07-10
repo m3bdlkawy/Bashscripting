@@ -1,0 +1,47 @@
+#!/bin/bash 
+# Author : M.Abdelkawy
+# Date : 10-07-2023
+# Description :  This script will check if the service mariadb is run or not and restart it.
+# Modified : 25-02-2023
+
+#---------------------------------------------#
+# Define Variable
+SERVICE=mariadb
+LOGFILE=/var/log/ram.log
+LOGROTATE=/etc/logrotate.d/MOHAMED.SCRIPT
+free=$(free -mt | grep Total | awk '{print $4}')
+MEM=200    #MB
+# Check if the service is running or not
+systemctl is-active --quiet mariadb
+
+if [ $? -eq 0 ]
+	then
+        exit 0
+	else
+# check if free memory is less or equals to  MEM (MB)
+if [[ "$free" -le $MEM  ]]; then
+        ## get top processes consuming system memory and save to temporary file 
+        ps -eo pid,ppid,cmd,%mem,%cpu --sort=-%mem | head >>/tmp/top_proccesses_consuming_memory.txt
+        ## send a message if system memory is running low 
+	echo " $(date) .\nWarning, server memory is running low!\n\nFree memory: $free MB you shoud take action if you want to see top processes consuming system memory cat /tmp/top_proccesses_consuming_memory.txt"
+	echo "$(date) ./n$(free -th)" >> $LOGFILE
+    	fi
+	systemctl restart mariadb
+fi
+
+# managing the size of log file and add this file to the log rotate utility
+
+if [ -e $LOGROTATE ] 
+    then
+    exit
+    else echo "/var/log/$LOGFILE {
+    daily
+    missingok
+    rotate 7
+    compress
+    delaycompress
+    notifempty
+    create 0640 root root
+   }" 
+fi
+
