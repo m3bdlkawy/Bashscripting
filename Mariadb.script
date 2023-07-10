@@ -2,8 +2,7 @@
 # Author : M.Abdelkawy
 # Date : 10-07-2023
 # Description :  This script will check if the service mariadb is run or not and restart it.
-# Modified : 25-02-2023
-
+# Modified : 
 #---------------------------------------------#
 # Define Variable
 SERVICE=mariadb
