@@ -1,0 +1,46 @@
+#!/bin/bash
+#Author: M.Abdelkawy
+# Date: 02-12-2023
+# Description: This script for grep private network from network interface and replace it in the configuration file
+# Modified:
+#---------------------------------------------#
+
+# Define Script variables
+config_file="/etc/local"
+network_interface="enp0s3"
+replaced_line="local "
+log_argument="This log from changing Private IP of the Service"
+Service="ssh"
+script_name="changing ip"
+
+# Function to log messages to syslog
+log_to_syslog() {
+    logger -t "$(basename "$script_name")" "$log_argument"
+}
+
+# Get the current IP address
+current_ip=$(ip addr show "$network_interface" | grep -oP 'inet \K[\d.]+')
+
+# Get the previous IP address from the configuration file
+previous_ip=$(awk -v pattern="$replaced_line" '$0 ~ pattern {match($0, /local ([0-9]+\.[0-9]+\.[0-9]+\.[0-9]+)/); print substr($0, RSTART, RLENGTH)}' "$config_file")
+
+# Check if the IP address has changed since the last run
+   if [ "$current_ip" != "$previous_ip" ]; then
+      # If the IP has changed, update the file and restart the service
+       if ! sed -i "s/\(${replaced_line}\)[0-9.]\+/\1$current_ip/" "$config_file"; then
+       log_to_syslog "Error updating configuration file."
+       exit 1
+       else
+        # Restart the service
+          if ! systemctl restart "$Service"; then
+            log_to_syslog "Error restarting the $Service."
+            exit 1
+          else
+            # Log the message to syslog
+            log_to_syslog "IP address changed. Service $Service was restarted. New IP: $current_ip"
+          fi
+       fi
+else
+    # Log the message to syslog
+    log_to_syslog "IP address did not change. Service $Service was not restarted. Current IP: $current_ip"
+fi
